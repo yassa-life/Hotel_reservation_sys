@@ -1,105 +1,28 @@
 /**
- * API Client - connects React frontend to Java Servlet backend
- * Base URL: http://localhost:8080/hotel-system
+ * API Client — connects React frontend to Java Servlet backend
+ * Base URL: http://localhost:8080/hotel-system/api
+ *
+ * All functions throw on error — callers handle their own fallback/UX.
+ * NO silent dummy-data injection for auth calls.
  */
 
-import { ROOMS, CUSTOMERS, BOOKINGS, REVENUE_DATA } from '../data/mockData';
-
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/hotel-system/api').replace(/\/$/, '');
-let warnedOffline = false;
-
-const mockStore = {
-  rooms: [...ROOMS],
-  customers: [...CUSTOMERS],
-  reservations: [...BOOKINGS],
-  payments: [],
-  staff: [{ id: 1, name: 'Admin (Demo)', email: 'admin@harborview.lk', role: 'Admin' }],
-  reviews: [],
-  revenue: [...REVENUE_DATA],
-};
-
-function resolveMock(path) {
-  if (path.startsWith('/rooms')) return mockStore.rooms;
-  if (path.startsWith('/customers')) return mockStore.customers;
-  if (path.startsWith('/reservations')) return mockStore.reservations;
-  if (path.startsWith('/payments')) return mockStore.payments;
-  if (path.startsWith('/staff')) return mockStore.staff;
-  if (path.startsWith('/reviews')) return mockStore.reviews;
-  if (path.startsWith('/reports/revenue')) return mockStore.revenue;
-  if (path.startsWith('/reports')) {
-    const totalRevenue = mockStore.reservations.reduce((sum, r) => sum + Number(r.totalAmount ?? r.total_amount ?? r.amount ?? 0), 0);
-    const availableRooms = mockStore.rooms.filter(r => (r.status || '').toLowerCase() === 'available').length;
-    return {
-      totalReservations: mockStore.reservations.length,
-      totalRevenue,
-      availableRooms,
-    };
-  }
-  return [];
-}
-
-function applyMockMutation(path, method, body) {
-  const list = resolveMock(path);
-  if (!Array.isArray(list)) return list;
-  if (method === 'POST' && body && typeof body === 'object') {
-    list.unshift({ ...body, id: body.id ?? `${Date.now()}` });
-    return body;
-  }
-  if (method === 'PUT' && body && typeof body === 'object') {
-    const id = body.id ?? body.roomId ?? body.customerId ?? body.reservationId;
-    const idx = list.findIndex(item =>
-      [item.id, item.roomId, item.customerId, item.reservationId].includes(id)
-    );
-    if (idx >= 0) list[idx] = { ...list[idx], ...body };
-    return body;
-  }
-  if (method === 'DELETE') {
-    const idMatch = /[?&]id=([^&]+)/.exec(path);
-    if (idMatch) {
-      const id = decodeURIComponent(idMatch[1]);
-      const idx = list.findIndex(item =>
-        [String(item.id), String(item.roomId), String(item.customerId), String(item.reservationId)].includes(String(id))
-      );
-      if (idx >= 0) list.splice(idx, 1);
-    }
-    return { success: true };
-  }
-  return list;
-}
-
-function offlineFallback(path, options = {}) {
-  if (!warnedOffline) {
-    console.warn('[API] Backend unreachable, using local dummy data.');
-    warnedOffline = true;
-  }
-  const method = (options.method || 'GET').toUpperCase();
-  const body = typeof options.body === 'string' ? JSON.parse(options.body || '{}') : options.body;
-  if (path.startsWith('/staff/login')) {
-    const email = body?.email || 'admin@harborview.lk';
-    return { success: true, staff: { id: 1, name: 'Admin (Demo)', email, role: 'Admin' } };
-  }
-  if (method === 'GET') return resolveMock(path);
-  return applyMockMutation(path, method, body);
-}
 
 async function request(path, options = {}) {
   const url = `${BASE_URL}${path}`;
-  try {
-    const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
-      ...options,
-    });
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    ...options,
+  });
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || `HTTP ${res.status}`);
-    }
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : {};
 
-    const text = await res.text();
-    return text ? JSON.parse(text) : {};
-  } catch {
-    return offlineFallback(path, options);
+  if (!res.ok) {
+    // Use backend error message if available
+    throw new Error(body?.message || `HTTP ${res.status}`);
   }
+  return body;
 }
 
 // ─── Rooms ────────────────────────────────────────────────────────────────────
@@ -113,25 +36,45 @@ export const roomsApi = {
 
 // ─── Customers ────────────────────────────────────────────────────────────────
 export const customersApi = {
-  getAll:   ()     => request('/customers'),
-  getById:  (id)   => request(`/customers?id=${id}`),
-  login:    async (email, password) => {
-    const custs = await request('/customers');
-    const user = Array.isArray(custs) ? custs.find(c => c.email === email && c.password === password) : null;
-    if (!user) throw new Error('Invalid credentials');
-    return user;
+  getAll: () => request('/customers'),
+  getById: (id) => request(`/customers?id=${id}`),
+
+  /** Secure server-side login — returns { success, customer } */
+  login: async (email, password) => {
+    const data = await request('/customers/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    if (!data.success) throw new Error(data.message || 'Login failed');
+    return data.customer;
   },
-  register: (data) => request('/customers', { method: 'POST', body: JSON.stringify(data) }),
-  update:   (data) => request('/customers', { method: 'PUT',  body: JSON.stringify(data) }),
-  delete:   (id)   => request(`/customers?id=${id}`, { method: 'DELETE' }),
+
+  /** Register a new customer — returns { success, customer } */
+  register: async (data) => {
+    const result = await request('/customers', { method: 'POST', body: JSON.stringify(data) });
+    if (!result.success) throw new Error(result.message || 'Registration failed');
+    return result.customer;
+  },
+
+  /** Update profile — returns { success } */
+  update: (data) => request('/customers', { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id) => request(`/customers?id=${id}`, { method: 'DELETE' }),
 };
 
 // ─── Reservations ─────────────────────────────────────────────────────────────
 export const reservationsApi = {
-  getAll:  ()     => request('/reservations'),
-  create:  (data) => request('/reservations', { method: 'POST', body: JSON.stringify(data) }),
-  update:  (data) => request('/reservations', { method: 'PUT',  body: JSON.stringify(data) }),
-  cancel:  (id)   => request(`/reservations?id=${id}`, { method: 'DELETE' }),
+  getAll: () => request('/reservations'),
+
+  /** Get reservations for a specific customer */
+  getByCustomer: (customerId) => request(`/reservations?customerId=${customerId}`),
+
+  /** Get booked date ranges for a specific room (for date picker blocking) */
+  getBookedDates: (roomId) => request(`/reservations?roomId=${roomId}&bookedDates=true`),
+
+  create: (data) => request('/reservations', { method: 'POST', body: JSON.stringify(data) }),
+  update: (data) => request('/reservations', { method: 'PUT',  body: JSON.stringify(data) }),
+  cancel: (id)   => request(`/reservations?id=${id}`, { method: 'DELETE' }),
 };
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
@@ -141,24 +84,32 @@ export const paymentsApi = {
   update:  (data) => request('/payments', { method: 'PUT',  body: JSON.stringify(data) }),
 };
 
-// ─── Staff / Auth ─────────────────────────────────────────────────────────────
+// ─── Staff / Admin ────────────────────────────────────────────────────────────
 export const staffApi = {
-  getAll:  ()                      => request('/staff'),
-  login:   (email, password)       => request('/staff/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  create:  (data)                  => request('/staff', { method: 'POST', body: JSON.stringify(data) }),
-  update:  (data)                  => request('/staff', { method: 'PUT',  body: JSON.stringify(data) }),
-  delete:  (id)                    => request(`/staff?id=${id}`, { method: 'DELETE' }),
+  getAll:  ()               => request('/staff'),
+  login:   (email, password) => request('/staff/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  create:  (data)           => request('/staff', { method: 'POST', body: JSON.stringify(data) }),
+  update:  (data)           => request('/staff', { method: 'PUT',  body: JSON.stringify(data) }),
+  delete:  (id)             => request(`/staff?id=${id}`, { method: 'DELETE' }),
 };
 
 // ─── Reports ──────────────────────────────────────────────────────────────────
 export const reportsApi = {
-  getSummary: ()  => request('/reports'),
-  getFull:    ()  => request('/reports/full'),
-  getRevenue: ()  => request('/reports/revenue'),
+  getSummary: ()       => request('/reports'),
+  getFull:    ()       => request('/reports/full'),
+  /** Pass year (e.g. 2025) or 0 / undefined for current year */
+  getRevenue: (year)   => request(`/reports/revenue${year ? `?year=${year}` : ''}`),
 };
 
 // ─── Reviews ──────────────────────────────────────────────────────────────────
 export const reviewsApi = {
-  getAll:  ()     => request('/reviews'),
-  create:  (data) => request('/reviews', { method: 'POST', body: JSON.stringify(data) }),
+  getAll:         ()             => request('/reviews'),
+  /** Get reviews written by a specific customer (includes room info) */
+  getByCustomer:  (customerId)   => request(`/reviews?customerId=${customerId}`),
+  create:         (data)         => request('/reviews', { method: 'POST', body: JSON.stringify(data) }),
+  /** Update rating + comment for a review the customer owns */
+  update:         (data)         => request('/reviews', { method: 'PUT',  body: JSON.stringify(data) }),
+  /** Delete a review — pass customerId for owner-safe delete */
+  delete:         (id, customerId) =>
+    request(`/reviews?id=${id}${customerId ? `&customerId=${customerId}` : ''}`, { method: 'DELETE' }),
 };

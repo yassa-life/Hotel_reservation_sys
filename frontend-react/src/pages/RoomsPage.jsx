@@ -5,7 +5,7 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { PlaceholderImage, StarRating, StatusBadge, Breadcrumb, Pagination } from '../components/shared/UI';
 import { roomsApi } from '../api/client';
-import { ROOMS as MOCK_ROOMS } from '../data/mockData';
+
 
 const TYPES = ['All', 'Single', 'Double', 'Suite', 'Deluxe'];
 const PER_PAGE = 4;
@@ -13,6 +13,8 @@ const PER_PAGE = 4;
 export default function RoomsPage() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   
   const [search, setSearch] = useState('');
   const [type, setType] = useState('All');
@@ -22,12 +24,12 @@ export default function RoomsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    roomsApi.getAll().then(data => {
-      setRooms(Array.isArray(data) && data.length > 0 ? data : MOCK_ROOMS);
-    }).catch(() => {
-      setRooms(MOCK_ROOMS);
-    }).finally(() => setLoading(false));
+    roomsApi.getAll()
+      .then(data => setRooms(Array.isArray(data) ? data : []))
+      .catch(err => setError(err.message || 'Failed to load rooms.'))
+      .finally(() => setLoading(false));
   }, []);
+
 
   const filtered = useMemo(() => {
     let r = rooms.filter(room => {
@@ -121,7 +123,13 @@ export default function RoomsPage() {
         )}
 
         {/* Results */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            ⚠ Could not load rooms: {error}. Make sure the backend server is running.
+          </div>
+        )}
         {loading ? (
+
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              {[1,2,3,4].map(i => <div key={i} className="card h-40 animate-pulse bg-light-gray/50"/>)}
            </div>
