@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, BookOpen, User, Settings, LogOut, Menu, X
+  LayoutDashboard, BookOpen, User, Settings, LogOut, Menu, X, Star
 } from 'lucide-react';
+
 import { useAuth } from '../../context/AppContext';
 
 const navItems = [
   { to: '/dashboard',          icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/dashboard/bookings', icon: BookOpen,         label: 'My Bookings' },
+  { to: '/dashboard/reviews',  icon: Star,             label: 'My Reviews' },
   { to: '/dashboard/profile',  icon: User,             label: 'Profile' },
   { to: '/dashboard/settings', icon: Settings,         label: 'Settings' },
 ];

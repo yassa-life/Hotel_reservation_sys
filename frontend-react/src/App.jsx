@@ -17,6 +17,7 @@ import UserDashboardPage      from './pages/dashboard/UserDashboardPage';
 import MyBookingsPage         from './pages/dashboard/MyBookingsPage';
 import ProfilePage            from './pages/dashboard/ProfilePage';
 import SettingsPage           from './pages/dashboard/SettingsPage';
+import MyReviewsPage          from './pages/dashboard/MyReviewsPage';
 
 // Admin Pages
 import AdminDashboardPage     from './pages/admin/AdminDashboardPage';
@@ -60,6 +61,7 @@ function AppRoutes() {
       <Route path="/dashboard/bookings" element={<RequireUser><MyBookingsPage/></RequireUser>}/>
       <Route path="/dashboard/profile"  element={<RequireUser><ProfilePage/></RequireUser>}/>
       <Route path="/dashboard/settings" element={<RequireUser><SettingsPage/></RequireUser>}/>
+      <Route path="/dashboard/reviews"  element={<RequireUser><MyReviewsPage/></RequireUser>}/>
 
       {/* Admin */}
       <Route path="/admin/dashboard"  element={<RequireAdmin><AdminDashboardPage/></RequireAdmin>}/>
