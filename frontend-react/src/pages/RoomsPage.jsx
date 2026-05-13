@@ -1,10 +1,33 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, Users, DollarSign, X } from 'lucide-react';
+import { Search, Filter, DollarSign, X, ImageOff } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import { PlaceholderImage, StarRating, StatusBadge, Breadcrumb, Pagination } from '../components/shared/UI';
+import { StarRating, StatusBadge, Breadcrumb, Pagination } from '../components/shared/UI';
 import { roomsApi } from '../api/client';
+
+const TOMCAT = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/hotel-system/api')
+  .replace(/\/api$/, '');
+
+function RoomImage({ room, className = '' }) {
+  const [err, setErr] = useState(false);
+  // Support both the new images[] array and the legacy imageUrl field
+  const imgs = room.images ?? [];
+  const primary = imgs.find(i => i.isPrimary || i.is_primary) ?? imgs[0] ?? null;
+  const rawUrl  = primary ? (primary.imageUrl ?? primary.image_url)
+                          : (room.imageUrl ?? room.image_url ?? null);
+  const src = rawUrl ? `${TOMCAT}${rawUrl}` : null;
+
+  if (!src || err) {
+    return (
+      <div className={`flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-400 ${className}`}>
+        <ImageOff size={26} className="mb-1 opacity-50" />
+        <span className="text-xs font-medium">{room.roomNumber ?? room.room_number ?? 'Room'}</span>
+      </div>
+    );
+  }
+  return <img src={src} alt={`Room ${room.roomNumber ?? room.room_number}`} onError={() => setErr(true)} className={`object-cover ${className}`} />;
+}
 
 
 const TYPES = ['All', 'Single', 'Double', 'Suite', 'Deluxe'];
@@ -146,7 +169,7 @@ export default function RoomsPage() {
                 {paginated.map(room => (
                   <Link key={getId(room)} to={`/rooms/${getId(room)}`}
                     className="card card-hover group flex flex-col sm:flex-row gap-4 animate-fade-in">
-                    <PlaceholderImage label={getName(room)} className="sm:w-48 h-40 sm:h-auto rounded-xl flex-shrink-0"/>
+                    <RoomImage room={room} className="sm:w-48 h-40 sm:h-auto rounded-xl flex-shrink-0"/>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-1">
                         <span className="badge badge-confirmed text-xs">{room.type}</span>
