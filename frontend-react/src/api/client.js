@@ -32,6 +32,42 @@ export const roomsApi = {
   create:  (data) => request('/rooms', { method: 'POST', body: JSON.stringify(data) }),
   update:  (data) => request('/rooms', { method: 'PUT',  body: JSON.stringify(data) }),
   delete:  (id)   => request(`/rooms?id=${id}`, { method: 'DELETE' }),
+
+  // ── Multi-image API ──────────────────────────────────────────────────────
+  /** Get all images for a room → array of { imageId, roomId, imageUrl, isPrimary, sortOrder } */
+  getImages: (roomId) => request(`/rooms/image?roomId=${roomId}`),
+
+  /**
+   * Upload ONE new image for a room.
+   * @param {number} roomId
+   * @param {File}   file
+   * @returns {{ success: boolean, image: { imageId, roomId, imageUrl, isPrimary, sortOrder } }}
+   */
+  uploadImage: async (roomId, file) => {
+    const form = new FormData();
+    form.append('image', file);
+    const url = `${BASE_URL}/rooms/image?roomId=${roomId}`;
+    const res = await fetch(url, { method: 'POST', body: form });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body?.message || `HTTP ${res.status}`);
+    return body;
+  },
+
+  /** Set one image as the primary thumbnail */
+  setPrimary: (imageId, roomId) =>
+    request(`/rooms/image?imageId=${imageId}&roomId=${roomId}&action=setPrimary`, { method: 'PUT' }),
+
+  /** Delete a single image record by imageId */
+  deleteImage: (imageId) => request(`/rooms/image?imageId=${imageId}`, { method: 'DELETE' }),
+
+  /**
+   * Save an external / pasted image URL directly (no file upload).
+   * @param {number} roomId
+   * @param {string} imageUrl  — any http/https URL or relative path
+   * @returns {{ success: boolean, image: { imageId, roomId, imageUrl, isPrimary, sortOrder } }}
+   */
+  addImageByUrl: (roomId, imageUrl) =>
+    request('/rooms/imageurl', { method: 'POST', body: JSON.stringify({ roomId, imageUrl }) }),
 };
 
 // ─── Customers ────────────────────────────────────────────────────────────────
