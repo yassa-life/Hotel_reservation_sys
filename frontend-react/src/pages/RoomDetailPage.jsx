@@ -1,33 +1,95 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, Users, Maximize2, Building2, Wifi, Check, Star } from 'lucide-react';
+import { ChevronLeft, Users, Maximize2, Building2, Check, Star } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { PlaceholderImage, StarRating, StatusBadge, Breadcrumb } from '../components/shared/UI';
-import { roomsApi } from '../api/client';
-import { ROOMS as MOCK_ROOMS } from '../data/mockData';
+import { roomsApi, reservationsApi } from '../api/client';
 
 export default function RoomDetailPage() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [room, setRoom] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeImg, setActiveImg] = useState(0);
-  const [checkIn,  setCheckIn]  = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [guests,   setGuests]   = useState(1);
+  const [room,        setRoom]        = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [bookedRanges, setBookedRanges] = useState([]); // [{checkInDate, checkOutDate}]
+  const [activeImg,   setActiveImg]   = useState(0);
+  const [checkIn,     setCheckIn]     = useState('');
+  const [checkOut,    setCheckOut]    = useState('');
+  const [guests,      setGuests]      = useState(1);
+  const [dateError,   setDateError]   = useState('');
 
   useEffect(() => {
-    roomsApi.getById(id).then(data => {
-      if (data && Object.keys(data).length > 0) {
-        setRoom(data);
-      } else {
-        setRoom(MOCK_ROOMS.find(r => r.id === +id) || null);
+    setLoading(true);
+    Promise.all([
+      roomsApi.getById(id),
+      reservationsApi.getBookedDates(id).catch(() => []),
+    ]).then(([roomData, bookings]) => {
+      if (roomData && Object.keys(roomData).length > 0) {
+        setRoom(roomData);
       }
+      // Store active bookings as date ranges
+      const ranges = Array.isArray(bookings)
+        ? bookings.filter(b => !['Cancelled'].includes(b.status)).map(b => ({
+            start: String(b.checkInDate  ?? b.check_in_date  ?? '').slice(0, 10),
+            end:   String(b.checkOutDate ?? b.check_out_date ?? '').slice(0, 10),
+          }))
+        : [];
+      setBookedRanges(ranges);
     }).catch(() => {
-      setRoom(MOCK_ROOMS.find(r => r.id === +id) || null);
+      setRoom(null);
     }).finally(() => setLoading(false));
   }, [id]);
+
+  // Check if a date falls inside any booked range
+  const isDateBooked = (dateStr) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    return bookedRanges.some(r => {
+      const start = new Date(r.start);
+      const end   = new Date(r.end);
+      return d >= start && d < end; // check-in day is blocked; checkout day is free
+    });
+  };
+
+  // Build a string for the min of checkout (day after checkin)
+  const minCheckOut = checkIn
+    ? new Date(new Date(checkIn).getTime() + 86400000).toISOString().split('T')[0]
+    : new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+  const handleCheckInChange = (e) => {
+    const val = e.target.value;
+    if (isDateBooked(val)) {
+      setDateError('This date is already booked. Please choose another date.');
+      setCheckIn('');
+      return;
+    }
+    setDateError('');
+    setCheckIn(val);
+    if (checkOut && checkOut <= val) setCheckOut('');
+  };
+
+  const handleCheckOutChange = (e) => {
+    const val = e.target.value;
+    // Check if any date in the range is booked
+    if (checkIn) {
+      const start = new Date(checkIn);
+      const end   = new Date(val);
+      let current = new Date(start.getTime() + 86400000);
+      let conflict = false;
+      while (current < end) {
+        const ds = current.toISOString().split('T')[0];
+        if (isDateBooked(ds)) { conflict = true; break; }
+        current = new Date(current.getTime() + 86400000);
+      }
+      if (conflict) {
+        setDateError('Your selected range overlaps with an existing booking. Please choose different dates.');
+        setCheckOut('');
+        return;
+      }
+    }
+    setDateError('');
+    setCheckOut(val);
+  };
 
   if (loading) return (
     <div className="min-h-screen flex flex-col">
@@ -67,9 +129,15 @@ export default function RoomDetailPage() {
     : 0;
 
   const handleBook = () => {
-    if (!checkIn || !checkOut || nights < 1) return alert('Please select valid dates.');
+    if (!checkIn || !checkOut || nights < 1) {
+      setDateError('Please select valid check-in and check-out dates.');
+      return;
+    }
     nav('/booking', { state: { room, checkIn, checkOut, nights, guests } });
   };
+
+  const today = new Date().toISOString().split('T')[0];
+  const isAvailable = (room.status ?? '').toLowerCase() === 'available';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -153,24 +221,48 @@ export default function RoomDetailPage() {
             </div>
           </div>
 
+          {/* Booking Widget */}
           <div className="lg:col-span-1">
             <div className="card sticky top-20">
               <h2 className="font-display font-semibold text-lg text-navy-800 mb-5">Reserve This Room</h2>
+
+              {/* Booked ranges notice */}
+              {bookedRanges.length > 0 && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
+                  ⚠ Some dates are unavailable. Booked dates will be blocked automatically.
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div>
                   <label className="label">Check-in Date</label>
                   <input type="date" value={checkIn}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={e => setCheckIn(e.target.value)}
+                    min={today}
+                    onChange={handleCheckInChange}
                     className="input-field"/>
                 </div>
                 <div>
                   <label className="label">Check-out Date</label>
                   <input type="date" value={checkOut}
-                    min={checkIn || new Date().toISOString().split('T')[0]}
-                    onChange={e => setCheckOut(e.target.value)}
+                    min={minCheckOut}
+                    onChange={handleCheckOutChange}
                     className="input-field"/>
                 </div>
+
+                {dateError && (
+                  <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg p-2">{dateError}</p>
+                )}
+
+                {/* Show booked date ranges for user info */}
+                {bookedRanges.length > 0 && (
+                  <div className="text-xs text-mid-gray space-y-1">
+                    <p className="font-medium text-dark-text">Unavailable periods:</p>
+                    {bookedRanges.map((r, i) => (
+                      <p key={i} className="text-red-500">• {r.start} → {r.end}</p>
+                    ))}
+                  </div>
+                )}
+
                 <div>
                   <label className="label">Guests</label>
                   <select value={guests} onChange={e => setGuests(+e.target.value)} className="input-field">
@@ -199,9 +291,9 @@ export default function RoomDetailPage() {
               )}
 
               <button onClick={handleBook}
-                disabled={room.status !== 'Available'}
-                className="btn-gold w-full mt-5">
-                {room.status === 'Available' ? 'Proceed to Book' : room.status}
+                disabled={!isAvailable || !!dateError}
+                className="btn-gold w-full mt-5 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isAvailable ? 'Proceed to Book' : room.status}
               </button>
 
               <div className="flex items-center justify-center gap-2 mt-3">

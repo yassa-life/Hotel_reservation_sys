@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAuth, useToast } from '../context/AppContext';
+import { customersApi } from '../api/client';
 
 export default function SignUpPage() {
   const nav = useNavigate();
@@ -33,12 +34,23 @@ export default function SignUpPage() {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    // TODO: API call to POST /api/auth/register
-    await new Promise(r => setTimeout(r, 1000));
-    loginUser({ name: `${form.firstName} ${form.lastName}`, email: form.email });
-    addToast('Account created! Welcome to Harborview.', 'success');
-    nav('/dashboard');
-    setLoading(false);
+    try {
+      const customer = await customersApi.register({
+        name:     `${form.firstName} ${form.lastName}`,
+        email:    form.email,
+        password: form.password,
+        phone:    form.phone,
+        address:  '',
+      });
+      // Auto-login after successful registration
+      loginUser(customer || { name: `${form.firstName} ${form.lastName}`, email: form.email });
+      addToast('Account created! Welcome to Harborview.', 'success');
+      nav('/dashboard');
+    } catch (err) {
+      addToast(err.message || 'Registration failed. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const strength = () => {
@@ -98,24 +110,6 @@ export default function SignUpPage() {
           </div>
 
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
-            {/* Google */}
-            <button type="button"
-              className="w-full flex items-center justify-center gap-3 border border-light-gray rounded-xl py-3 text-sm font-medium text-dark-text hover:bg-light-gray transition-colors">
-              <svg width="18" height="18" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.1 0 5.6 1.1 7.6 2.9l5.6-5.6C33.5 3.5 29 1.5 24 1.5 14.7 1.5 6.8 7.2 3.3 15.3l6.6 5.1C11.5 14 17.3 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.4 5.7c4.3-4 6.8-9.9 6.8-16.9z"/>
-                <path fill="#FBBC05" d="M9.9 28.6C9.3 26.9 9 25.1 9 23.3s.3-3.6.9-5.3L3.3 12.9A22.7 22.7 0 001.5 23.3c0 3.7.9 7.2 2.4 10.3l6-5z"/>
-                <path fill="#34A853" d="M24 46.5c5.4 0 10-1.8 13.3-4.9l-7.4-5.7c-1.8 1.2-4 1.9-5.9 1.9-6.7 0-12.5-4.5-14.1-10.9l-6.6 5.1C6.8 39.8 14.7 46.5 24 46.5z"/>
-              </svg>
-              Continue with Google
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-light-gray"/>
-              <span className="text-xs text-mid-gray">or register with email</span>
-              <div className="flex-1 h-px bg-light-gray"/>
-            </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">First Name</label>
