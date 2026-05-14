@@ -40,8 +40,9 @@ export default function AdminCustomersPage() {
   const getPhone = c => c.phone ?? '—';
   const getAddr  = c => c.address ?? '—';
 
+  // Both IDs come as numbers from Gson — compare strictly as numbers
   const custBookings = (id) =>
-    reservations.filter(r => (r.customerId ?? r.customer_id) === id);
+    reservations.filter(r => Number(r.customerId ?? r.customer_id) === Number(id));
 
   const filtered = customers.filter(c =>
     [getName(c), getEmail(c), getPhone(c)].some(v => v.toLowerCase().includes(search.toLowerCase()))

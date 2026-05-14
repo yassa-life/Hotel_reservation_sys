@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 // ─── Toast Context ────────────────────────────────────────────────────────────
@@ -45,15 +45,39 @@ export function ToastProvider({ children }) {
 
 export const useToast = () => useContext(ToastContext);
 
-// ─── Auth Context ─────────────────────────────────────────────────────────────
+// ─── Auth Context — persists session in localStorage ─────────────────────────
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);   // null = not logged in
-  const [admin, setAdmin] = useState(null);
+const USER_KEY  = 'hrv_user';
+const ADMIN_KEY = 'hrv_admin';
 
-  const loginUser  = (data) => setUser(data);
-  const loginAdmin = (data) => setAdmin(data);
+function readStorage(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function AuthProvider({ children }) {
+  // Initialise from localStorage so session survives page refresh
+  const [user,  setUser]  = useState(() => readStorage(USER_KEY));
+  const [admin, setAdmin] = useState(() => readStorage(ADMIN_KEY));
+
+  // Keep localStorage in sync whenever state changes
+  useEffect(() => {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+    else      localStorage.removeItem(USER_KEY);
+  }, [user]);
+
+  useEffect(() => {
+    if (admin) localStorage.setItem(ADMIN_KEY, JSON.stringify(admin));
+    else       localStorage.removeItem(ADMIN_KEY);
+  }, [admin]);
+
+  const loginUser   = (data) => setUser(data);
+  const loginAdmin  = (data) => setAdmin(data);
   const logoutUser  = () => setUser(null);
   const logoutAdmin = () => setAdmin(null);
 

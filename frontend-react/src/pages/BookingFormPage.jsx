@@ -1,19 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { Breadcrumb } from '../components/shared/UI';
-import { useToast } from '../context/AppContext';
+import { useToast, useAuth } from '../context/AppContext';
 
 export default function BookingFormPage() {
   const { state } = useLocation();
   const nav = useNavigate();
   const { addToast } = useToast();
+  const { user } = useAuth();
   const room = state?.room;
 
+  // Redirect to sign-in if not logged in
+  useEffect(() => {
+    if (!user) {
+      addToast('Please sign in to make a booking.', 'info');
+      nav('/signin', { replace: true });
+    }
+  }, [user]);
+
+  // Split stored name into first/last
+  const nameParts = (user?.name || '').split(' ');
+
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', phone: '',
-    country: 'Sri Lanka', special: '',
+    firstName: nameParts[0] || '',
+    lastName:  nameParts.slice(1).join(' ') || '',
+    email:     user?.email   || '',
+    phone:     user?.phone   || '',
+    country:   'Sri Lanka',
+    special:   '',
   });
   const [errors, setErrors] = useState({});
 
@@ -32,8 +48,16 @@ export default function BookingFormPage() {
   const handleSubmit = e => {
     e.preventDefault();
     if (!validate()) return;
-    // TODO: API call to POST /api/bookings
-    nav('/payment', { state: { room: state?.room, checkIn: state?.checkIn, checkOut: state?.checkOut, nights: state?.nights, guests: state?.guests, guest: form } });
+    nav('/payment', {
+      state: {
+        room:     state?.room,
+        checkIn:  state?.checkIn,
+        checkOut: state?.checkOut,
+        nights:   state?.nights,
+        guests:   state?.guests,
+        guest:    form,
+      }
+    });
   };
 
   if (!room) return (
@@ -42,14 +66,15 @@ export default function BookingFormPage() {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <h2 className="font-display text-2xl font-bold text-navy-800 mb-2">No Room Selected</h2>
-          <button onClick={()=>nav('/rooms')} className="btn-primary mt-4">Browse Rooms</button>
+          <button onClick={() => nav('/rooms')} className="btn-primary mt-4">Browse Rooms</button>
         </div>
       </div>
       <Footer/>
     </div>
   );
 
-  const subtotal = room.price * (state?.nights || 1);
+  const price    = Number(room.pricePerNight ?? room.price_per_night ?? room.price ?? 0);
+  const subtotal = price * (state?.nights || 1);
   const taxes    = Math.round(subtotal * 0.1);
   const total    = subtotal + taxes;
 
@@ -69,10 +94,10 @@ export default function BookingFormPage() {
                 <h2 className="font-display font-semibold text-navy-800 mb-5">Personal Information</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
-                    { key:'firstName', label:'First Name', type:'text',  placeholder:'John' },
-                    { key:'lastName',  label:'Last Name',  type:'text',  placeholder:'Doe' },
+                    { key:'firstName', label:'First Name',    type:'text',  placeholder:'John' },
+                    { key:'lastName',  label:'Last Name',     type:'text',  placeholder:'Doe' },
                     { key:'email',     label:'Email Address', type:'email', placeholder:'john@example.com', span:true },
-                    { key:'phone',     label:'Phone Number', type:'tel', placeholder:'+1 555 000 0000' },
+                    { key:'phone',     label:'Phone Number',  type:'tel',   placeholder:'+94 77 000 0000' },
                   ].map(f => (
                     <div key={f.key} className={f.span ? 'sm:col-span-2' : ''}>
                       <label className="label">{f.label}</label>
@@ -123,44 +148,43 @@ export default function BookingFormPage() {
           <div>
             <div className="card sticky top-20">
               <h2 className="font-display font-semibold text-navy-800 mb-4">Booking Summary</h2>
-              <div className="h-40 bg-light-gray rounded-xl flex items-center justify-center mb-4">
-                <span className="text-mid-gray text-sm">{room.name}</span>
+              <div className="h-32 bg-navy-100 rounded-xl flex items-center justify-center mb-4">
+                <span className="text-navy-600 font-semibold">
+                  {room.name ?? `Room #${room.roomNumber ?? room.room_number}`}
+                </span>
               </div>
-              <h3 className="font-semibold text-dark-text">{room.name}</h3>
-              <p className="text-xs text-mid-gray mt-1 mb-4">{room.type} · {room.size}</p>
+              <h3 className="font-semibold text-dark-text">
+                {room.name ?? `Room ${room.roomNumber ?? room.room_number}`}
+              </h3>
+              <p className="text-xs text-mid-gray mt-1 mb-4">{room.type}</p>
 
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-mid-gray">Check-in</span>
-                  <span className="font-medium">{state?.checkIn || '—'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-mid-gray">Check-out</span>
-                  <span className="font-medium">{state?.checkOut || '—'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-mid-gray">Guests</span>
-                  <span className="font-medium">{state?.guests}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-mid-gray">Nights</span>
-                  <span className="font-medium">{state?.nights}</span>
-                </div>
+                {[
+                  ['Check-in',  state?.checkIn  || '—'],
+                  ['Check-out', state?.checkOut || '—'],
+                  ['Guests',    state?.guests],
+                  ['Nights',    state?.nights],
+                ].map(([k,v]) => (
+                  <div key={k} className="flex justify-between">
+                    <span className="text-mid-gray">{k}</span>
+                    <span className="font-medium">{v}</span>
+                  </div>
+                ))}
               </div>
 
               <hr className="my-4 border-light-gray"/>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-mid-gray">${room.price} × {state?.nights} night{state?.nights>1?'s':''}</span>
-                  <span>${subtotal}</span>
+                  <span className="text-mid-gray">LKR {price.toLocaleString()} × {state?.nights} night{state?.nights>1?'s':''}</span>
+                  <span>LKR {subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-mid-gray">Taxes & fees (10%)</span>
-                  <span>${taxes}</span>
+                  <span>LKR {taxes.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between font-bold text-dark-text border-t border-light-gray pt-2 mt-1">
                   <span>Total</span>
-                  <span className="text-navy-800 text-lg">${total}</span>
+                  <span className="text-navy-800 text-lg">LKR {total.toLocaleString()}</span>
                 </div>
               </div>
             </div>
