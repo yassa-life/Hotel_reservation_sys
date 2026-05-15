@@ -9,25 +9,8 @@ import { roomsApi } from '../api/client';
 const TOMCAT = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/hotel-system/api')
   .replace(/\/api$/, '');
 
-function RoomImage({ room, className = '' }) {
-  const [err, setErr] = useState(false);
-  // Support both the new images[] array and the legacy imageUrl field
-  const imgs = room.images ?? [];
-  const primary = imgs.find(i => i.isPrimary || i.is_primary) ?? imgs[0] ?? null;
-  const rawUrl  = primary ? (primary.imageUrl ?? primary.image_url)
-                          : (room.imageUrl ?? room.image_url ?? null);
-  const src = rawUrl ? `${TOMCAT}${rawUrl}` : null;
+import RoomImage from '../components/shared/RoomImage';
 
-  if (!src || err) {
-    return (
-      <div className={`flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-400 ${className}`}>
-        <ImageOff size={26} className="mb-1 opacity-50" />
-        <span className="text-xs font-medium">{room.roomNumber ?? room.room_number ?? 'Room'}</span>
-      </div>
-    );
-  }
-  return <img src={src} alt={`Room ${room.roomNumber ?? room.room_number}`} onError={() => setErr(true)} className={`object-cover ${className}`} />;
-}
 
 
 const TYPES = ['All', 'Single', 'Double', 'Suite', 'Deluxe'];
