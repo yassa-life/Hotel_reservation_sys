@@ -6,6 +6,9 @@ import Footer from '../components/layout/Footer';
 import { PlaceholderImage, StarRating, StatusBadge, Breadcrumb } from '../components/shared/UI';
 import { roomsApi, reservationsApi } from '../api/client';
 
+const TOMCAT = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/hotel-system/api')
+  .replace(/\/api$/, '');
+
 export default function RoomDetailPage() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -124,6 +127,28 @@ export default function RoomDetailPage() {
     `${getName(room)} - Balcony`,
   ];
 
+  const resolveImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${TOMCAT}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
+  const getImages = (r) => {
+    const arr = [];
+    if (r.images && r.images.length > 0) {
+      r.images.forEach(img => {
+        const src = resolveImageUrl(img.imageUrl ?? img.image_url);
+        if (src) arr.push(src);
+      });
+    } else {
+      const src = resolveImageUrl(r.imageUrl ?? r.image_url);
+      if (src) arr.push(src);
+    }
+    return arr;
+  };
+  
+  const roomImages = room ? getImages(room) : [];
+
   const nights = checkIn && checkOut
     ? Math.max(0, Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000))
     : 0;
@@ -151,16 +176,35 @@ export default function RoomDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="mb-4">
-              <PlaceholderImage label={imgLabels[activeImg]} className="w-full h-80 rounded-2xl"/>
-              <div className="flex gap-3 mt-3">
-                {imgLabels.map((label,i) => (
-                  <button key={i} onClick={() => setActiveImg(i)}
-                    className={`flex-1 rounded-xl overflow-hidden border-2 transition-all
-                                ${i===activeImg ? 'border-gold-500 shadow-md' : 'border-transparent'}`}>
-                    <PlaceholderImage label={`View ${i+1}`} className="h-16 w-full"/>
-                  </button>
-                ))}
-              </div>
+              {roomImages.length > 0 ? (
+                <>
+                  <img src={roomImages[activeImg % roomImages.length]} alt="Room View" className="w-full h-80 rounded-2xl object-cover"/>
+                  {roomImages.length > 1 && (
+                    <div className="flex gap-3 mt-3 overflow-x-auto pb-1">
+                      {roomImages.map((src, i) => (
+                        <button key={i} onClick={() => setActiveImg(i)}
+                          className={`flex-1 min-w-[80px] max-w-[120px] rounded-xl overflow-hidden border-2 transition-all
+                                      ${i===activeImg ? 'border-gold-500 shadow-md' : 'border-transparent'}`}>
+                          <img src={src} alt={`View ${i+1}`} className="h-16 w-full object-cover"/>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <PlaceholderImage label={imgLabels[activeImg]} className="w-full h-80 rounded-2xl"/>
+                  <div className="flex gap-3 mt-3">
+                    {imgLabels.map((label,i) => (
+                      <button key={i} onClick={() => setActiveImg(i)}
+                        className={`flex-1 rounded-xl overflow-hidden border-2 transition-all
+                                    ${i===activeImg ? 'border-gold-500 shadow-md' : 'border-transparent'}`}>
+                        <PlaceholderImage label={`View ${i+1}`} className="h-16 w-full"/>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex items-start justify-between mb-4">
