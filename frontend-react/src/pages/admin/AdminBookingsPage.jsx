@@ -38,11 +38,13 @@ export default function AdminBookingsPage() {
   useEffect(() => { load(); }, []);
 
   const getId   = r => r.reservationId   ?? r.reservation_id;
-  const getCust = r => r.customerName    ?? `Customer #${r.customerId ?? r.customer_id}`;
-  const getRoom = r => r.roomName        ?? `Room #${r.roomId ?? r.room_id}`;
-  const getIn   = r => r.checkInDate     ?? r.check_in_date;
-  const getOut  = r => r.checkOutDate    ?? r.check_out_date;
-  const getAmt  = r => Number(r.totalAmount ?? r.total_amount ?? 0);
+  // Use joined customer name — fall back to ID if not present
+  const getCust  = r => r.customerName    ?? `Customer #${r.customerId ?? r.customer_id}`;
+  // Use joined room number — fall back to ID if not present
+  const getRoom  = r => r.roomNumber      ? `Room ${r.roomNumber}` : `Room #${r.roomId ?? r.room_id}`;
+  const getIn    = r => r.checkInDate     ? String(r.checkInDate).slice(0,10)  : (r.check_in_date  ?? '—');
+  const getOut   = r => r.checkOutDate    ? String(r.checkOutDate).slice(0,10) : (r.check_out_date ?? '—');
+  const getAmt   = r => Number(r.totalAmount ?? r.total_amount ?? 0);
 
   const filtered = reservations.filter(r => {
     const matchStatus = filter === 'All' || r.status === filter;

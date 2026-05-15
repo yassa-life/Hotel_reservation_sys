@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, Star, Wifi, Coffee, Car, Waves } from 'lucide-react';
+import { Search, ChevronDown, Star, Wifi, Coffee, Car, Waves, ImageOff } from 'lucide-react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-import { PlaceholderImage, StarRating } from '../components/shared/UI';
+import { StarRating } from '../components/shared/UI';
+import RoomImage from '../components/shared/RoomImage';
 import { roomsApi } from '../api/client';
 import { ROOMS, TESTIMONIALS, AMENITIES } from '../data/mockData';
+
+
 
 const AMENITY_ICONS = {
   Waves, Dumbbell: Coffee, UtensilsCrossed: Coffee, Wifi, Car, Spa: Star
@@ -54,13 +57,25 @@ function SearchBar() {
 }
 
 export default function HomePage() {
-  const [featured, setFeatured] = useState([]);
+  const [featured, setFeatured] = useState(ROOMS.slice(0, 3)); // show mock instantly
+  const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
-    roomsApi.getAll().then(data => {
-      const valid = Array.isArray(data) && data.length > 0 ? data : ROOMS;
-      setFeatured(valid.slice(0, 3));
-    }).catch(() => setFeatured(ROOMS.slice(0, 3)));
+    roomsApi.getAll()
+      .then(data => {
+        // Use live data only if backend returned real rooms; keep mock otherwise
+        if (Array.isArray(data) && data.length > 0) {
+          // Prioritize rooms that actually have images uploaded
+          const withImages = data.filter(r => r.images && r.images.length > 0);
+          const withoutImages = data.filter(r => !r.images || r.images.length === 0);
+          
+          const combined = [...withImages, ...withoutImages];
+          setFeatured(combined.slice(0, 3));
+        }
+        // if empty array returned, featured already has ROOMS mock — don't clear it
+      })
+      .catch(() => { /* featured already has ROOMS mock */ })
+      .finally(() => setLoading(false));
   }, []);
 
   const getId    = r => r.roomId ?? r.room_id ?? r.id;
@@ -133,9 +148,14 @@ export default function HomePage() {
           <Link to="/rooms" className="btn-outline py-2.5 text-sm hidden sm:block">View All Rooms</Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {featured.map(room => (
+          {loading ? (
+            [1, 2, 3].map(i => (
+              <div key={i} className="card h-80 animate-pulse bg-light-gray/50 rounded-xl" />
+            ))
+          ) : (
+            featured.map(room => (
             <Link key={getId(room)} to={`/rooms/${getId(room)}`} className="card card-hover group animate-fade-in">
-              <PlaceholderImage label={getName(room)} className="w-full h-52 rounded-xl mb-4 group-hover:scale-[1.02] transition-transform duration-300"/>
+              <RoomImage room={room} className="w-full h-52 rounded-xl mb-4 group-hover:scale-[1.02] transition-transform duration-300" />
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <span className="badge badge-confirmed mb-2">{room.type || 'Standard'}</span>
@@ -158,7 +178,8 @@ export default function HomePage() {
                 ))}
               </div>
             </Link>
-          ))}
+          ))
+          )}
         </div>
         <div className="text-center mt-8 sm:hidden">
           <Link to="/rooms" className="btn-outline inline-block">View All Rooms</Link>
