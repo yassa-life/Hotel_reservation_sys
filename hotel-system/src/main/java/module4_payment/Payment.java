@@ -1,3 +1,14 @@
+package module4_payment;
+
+/**
+ * Module 4 - Payment Handling
+ * Member 4 Responsibility: Calculate total cost, handle payment status, different payment methods.
+ *
+ * OOP Concepts Demonstrated:
+ *  - Encapsulation: all fields are private with getters/setters
+ *  - Abstraction: exposes only necessary methods
+ */
+
 public class Payment {
 
 
@@ -9,7 +20,7 @@ public class Payment {
     private String status;        // "Paid" | "Pending" | "Refunded"
     private String paymentDate;
 
-    //Payment method constants
+    //module4_payment.Payment method constants
     public static final String METHOD_CASH   = "Cash";
     public static final String METHOD_CARD   = "Card";
     public static final String METHOD_ONLINE = "Online";
@@ -78,7 +89,7 @@ public class Payment {
 
     /**
      * Utility: calculates the total cost from price-per-night and number of nights.
-     * Demonstrates method responsibility inside the Payment class.
+     * Demonstrates method responsibility inside the module4_payment.Payment class.
      */
     public static double calculateTotal(double pricePerNight, int nights) {
         return pricePerNight * nights;
@@ -86,11 +97,7 @@ public class Payment {
 
     @Override
     public String toString() {
-        return "Payment{id=" + paymentId + "," +
-                " reservationId=" + reservationId + "," +
-                " amount=" + amount +
-                ", method=" + paymentMethod +
-                ", status=" + status + "}";
+        return "module4_payment.Payment{id=" + paymentId + "," + " reservationId=" + reservationId + "," + " amount=" + amount + ", method=" + paymentMethod + ", status=" + status + "}";
     }
 
 
