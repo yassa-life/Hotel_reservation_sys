@@ -15,7 +15,7 @@ import java.util.List;
  * Handles GET/POST/PUT/DELETE for /api/payments
  */
 
-public class PaymentServlet extends HttpServelt {
+public class PaymentServlet extends HttpServlet {
 
 
     private final PaymentDAO paymentDAO = new PaymentDAO();
