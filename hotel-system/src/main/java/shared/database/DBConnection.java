@@ -17,7 +17,7 @@ public class DBConnection {
 
     private static final String DB_URL      = "jdbc:mysql://localhost:3306/hotel_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
     private static final String DB_USER     = "root";
-    private static final String DB_PASSWORD = "root";
+    private static final String DB_PASSWORD = "2004panda@#123";
 
     // Private constructor — utility class, never instantiated
     private DBConnection() {}

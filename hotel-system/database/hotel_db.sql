@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS Reservations (
 );
 
 -- ============================================================
--- Module 4: Payment Handling
+-- Module 4: module4_payment.Payment Handling
 -- ============================================================
 CREATE TABLE IF NOT EXISTS Payments (
     payment_id     INT AUTO_INCREMENT PRIMARY KEY,
