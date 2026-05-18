@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
+                             https://jakarta.ee/xml/ns/jakartaee/web-app_5_0.xsd"
+         version="5.0">
+
+    <display-name>Hotel Room Reservation System</display-name>
+    <description>OOP Java Project - Hotel Management System API</description>
+
+    <!-- ============================================================
+         Servlet Declarations
+         ============================================================ -->
+
+    <!-- Module 1: Room Management -->
+    <servlet>
+        <servlet-name>RoomServlet</servlet-name>
+        <servlet-class>servlets.RoomServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RoomServlet</servlet-name>
+        <url-pattern>/api/rooms</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 1b: Room Image Upload (multipart) -->
+    <servlet>
+        <servlet-name>RoomImageServlet</servlet-name>
+        <servlet-class>servlets.RoomImageServlet</servlet-class>
+        <multipart-config>
+            <file-size-threshold>1048576</file-size-threshold>
+            <max-file-size>10485760</max-file-size>
+            <max-request-size>52428800</max-request-size>
+        </multipart-config>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RoomImageServlet</servlet-name>
+        <url-pattern>/api/rooms/image</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 1c: Room Image by URL -->
+    <servlet>
+        <servlet-name>RoomImageUrlServlet</servlet-name>
+        <servlet-class>servlets.RoomImageUrlServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RoomImageUrlServlet</servlet-name>
+        <url-pattern>/api/rooms/imageurl</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 2: Customer Management -->
+    <servlet>
+        <servlet-name>CustomerServlet</servlet-name>
+        <servlet-class>servlets.CustomerServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>CustomerServlet</servlet-name>
+        <url-pattern>/api/customers</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>CustomerServlet</servlet-name>
+        <url-pattern>/api/customers/login</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 3: Reservation System -->
+    <servlet>
+        <servlet-name>ReservationServlet</servlet-name>
+        <servlet-class>servlets.ReservationServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ReservationServlet</servlet-name>
+        <url-pattern>/api/reservations</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 4: Payment Handling -->
+    <servlet>
+        <servlet-name>PaymentServlet</servlet-name>
+        <servlet-class>servlets.PaymentServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>PaymentServlet</servlet-name>
+        <url-pattern>/api/payments</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 5: Staff / Admin -->
+    <servlet>
+        <servlet-name>StaffServlet</servlet-name>
+        <servlet-class>servlets.StaffServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>StaffServlet</servlet-name>
+        <url-pattern>/api/staff</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>StaffServlet</servlet-name>
+        <url-pattern>/api/staff/login</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 6: Reports & Reviews -->
+    <servlet>
+        <servlet-name>ReportServlet</servlet-name>
+        <servlet-class>servlets.ReportServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ReportServlet</servlet-name>
+        <url-pattern>/api/reports</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>ReportServlet</servlet-name>
+        <url-pattern>/api/reports/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>ReportServlet</servlet-name>
+        <url-pattern>/api/reviews</url-pattern>
+    </servlet-mapping>
+
+    <!-- ============================================================
+         Welcome File
+         ============================================================ -->
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+
+    <!-- ============================================================
+         Session Config
+         ============================================================ -->
+    <session-config>
+        <session-timeout>30</session-timeout>
+    </session-config>
+
+</web-app>

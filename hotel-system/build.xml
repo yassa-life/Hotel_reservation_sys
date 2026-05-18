@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="HotelReservationSystem" default="war" basedir=".">
+
+    <description>Hotel Room Reservation System - OOP Java Project</description>
+
+    <!-- Properties -->
+    <property name="src.dir"    value="${basedir}"/>
+    <property name="web.dir"    value="${basedir}/web"/>
+    <property name="build.dir"  value="${basedir}/build"/>
+    <property name="dist.dir"   value="${basedir}/dist"/>
+    <property name="lib.dir"    value="${basedir}/lib"/>
+
+    <!-- Classpath: Tomcat + MySQL + Gson JARs -->
+    <path id="compile.classpath">
+        <fileset dir="${lib.dir}">
+            <include name="*.jar"/>
+        </fileset>
+    </path>
+
+    <!-- 1. Clean -->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
+
+    <!-- 2. Compile all Java sources -->
+    <target name="compile" depends="clean">
+        <mkdir dir="${build.dir}/WEB-INF/classes"/>
+        <javac srcdir="${src.dir}"
+               destdir="${build.dir}/WEB-INF/classes"
+               includeantruntime="false"
+               encoding="UTF-8"
+               debug="true">
+            <classpath refid="compile.classpath"/>
+            <include name="shared/**/*.java"/>
+            <include name="module1_room/**/*.java"/>
+            <include name="module2_customer/**/*.java"/>
+            <include name="module3_reservation/**/*.java"/>
+            <include name="module4_payment/**/*.java"/>
+            <include name="module5_admin/**/*.java"/>
+            <include name="module6_review/**/*.java"/>
+            <include name="web/WEB-INF/servlets/**/*.java"/>
+        </javac>
+    </target>
+
+    <!-- 3. Package into WAR -->
+    <target name="war" depends="compile">
+        <mkdir dir="${dist.dir}"/>
+        <war destfile="${dist.dir}/hotel-system.war"
+             webxml="${web.dir}/WEB-INF/web.xml">
+            <fileset dir="${web.dir}">
+                <exclude name="WEB-INF/servlets/**"/>
+            </fileset>
+            <classes dir="${build.dir}/WEB-INF/classes"/>
+            <lib dir="${lib.dir}">
+                <include name="*.jar"/>
+            </lib>
+        </war>
+        <echo message="WAR file created: ${dist.dir}/hotel-system.war"/>
+    </target>
+
+</project>
