@@ -238,9 +238,9 @@ export default function MyReviewsPage() {
       setAllBookings(bookingList);
 
       const reviewedIds = new Set(reviewList.map(r => r.reservationId));
-      // Show all completed/checked-out bookings that haven't been reviewed
+      // Show checked-out bookings that haven't been reviewed
       const eligible = bookingList.filter(b =>
-        ['CheckedOut', 'Confirmed', 'Pending'].includes(b.status) &&
+        b.status === 'CheckedOut' &&
         !reviewedIds.has(b.reservationId)
       );
       setEligible(eligible);
@@ -266,7 +266,7 @@ export default function MyReviewsPage() {
   };
 
   const reviewedIds = new Set(reviews.map(r => r.reservationId));
-  const bookingsForModal = allBookings.filter(b => !reviewedIds.has(b.reservationId));
+  const bookingsForModal = allBookings.filter(b => b.status === 'CheckedOut' && !reviewedIds.has(b.reservationId));
 
   return (
     <div className="flex min-h-screen bg-cream">

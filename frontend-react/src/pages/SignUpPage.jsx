@@ -9,8 +9,10 @@ export default function SignUpPage() {
   const { loginUser } = useAuth();
   const { addToast } = useToast();
   const [form, setForm] = useState({
-    firstName:'', lastName:'', email:'', phone:'', password:'', confirm:'', agree: false,
+    firstName:'', lastName:'', email:'', password:'', confirm:'', agree: false,
   });
+  const [countryCode, setCountryCode] = useState('+94');
+  const [phoneNum, setPhoneNum] = useState('');
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -21,8 +23,20 @@ export default function SignUpPage() {
     const e = {};
     if (!form.firstName.trim()) e.firstName = 'Required';
     if (!form.lastName.trim())  e.lastName  = 'Required';
-    if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Valid email required';
-    if (!form.phone.trim())     e.phone     = 'Required';
+
+    // Strict email check regex
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(form.email)) e.email = 'Valid email required';
+
+    // Strict phone number check regex (7 to 12 digits, ignoring spaces/dashes)
+    const cleanPhone = phoneNum.replace(/[\s\-]/g, '');
+    const phoneRegex = /^[0-9]{7,12}$/;
+    if (!cleanPhone) {
+      e.phone = 'Required';
+    } else if (!phoneRegex.test(cleanPhone)) {
+      e.phone = 'Valid phone number required (7 to 12 digits)';
+    }
+
     if (form.password.length < 8) e.password = 'Min 8 characters';
     if (form.password !== form.confirm) e.confirm = 'Passwords do not match';
     if (!form.agree) e.agree = 'You must accept the terms';
@@ -39,7 +53,7 @@ export default function SignUpPage() {
         name:     `${form.firstName} ${form.lastName}`,
         email:    form.email,
         password: form.password,
-        phone:    form.phone,
+        phone:    `${countryCode} ${phoneNum}`,
         address:  '',
       });
       // Auto-login after successful registration
@@ -140,10 +154,23 @@ export default function SignUpPage() {
 
             <div>
               <label className="label">Phone Number</label>
-              <div className="relative">
-                <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mid-gray"/>
-                <input type="tel" value={form.phone} onChange={set('phone')} placeholder="+94 77 000 0000"
-                  className={`input-field pl-9 ${errors.phone?'input-error':''}`}/>
+              <div className="flex gap-2">
+                <select value={countryCode} onChange={e => setCountryCode(e.target.value)}
+                  className="input-field max-w-[100px] text-sm bg-white">
+                  <option value="+94">+94 (SL)</option>
+                  <option value="+1">+1 (US)</option>
+                  <option value="+44">+44 (UK)</option>
+                  <option value="+91">+91 (IN)</option>
+                  <option value="+61">+61 (AU)</option>
+                  <option value="+65">+65 (SG)</option>
+                  <option value="+34">+34 (ES)</option>
+                  <option value="+39">+39 (IT)</option>
+                </select>
+                <div className="relative flex-1">
+                  <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-mid-gray"/>
+                  <input type="tel" value={phoneNum} onChange={e => setPhoneNum(e.target.value)} placeholder="77 123 4567"
+                    className={`input-field pl-9 ${errors.phone?'input-error':''}`}/>
+                </div>
               </div>
               {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
             </div>

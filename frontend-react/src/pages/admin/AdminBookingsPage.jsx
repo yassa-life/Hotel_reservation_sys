@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Download, Eye, Check, X } from 'lucide-react';
+import { Search, Download, Eye, Check, X, LogOut } from 'lucide-react';
 import AdminSidebar from '../../components/layout/AdminSidebar';
 import { StatusBadge, Modal, ConfirmModal, Pagination } from '../../components/shared/UI';
 import { reservationsApi } from '../../api/client';
@@ -75,6 +75,18 @@ export default function AdminBookingsPage() {
       addToast(`Reservation #${id} cancelled.`, 'success');
     } catch {
       addToast('Failed to cancel reservation.', 'error');
+    }
+  };
+
+  const checkoutReservation = async (id) => {
+    try {
+      const res = reservations.find(r => getId(r) === id);
+      if (!res) return;
+      await reservationsApi.update({ ...res, status: 'CheckedOut' });
+      setReservations(prev => prev.map(r => getId(r) === id ? { ...r, status: 'CheckedOut' } : r));
+      addToast(`Reservation #${id} checked out.`, 'success');
+    } catch {
+      addToast('Failed to check out reservation.', 'error');
     }
   };
 
@@ -164,6 +176,12 @@ export default function AdminBookingsPage() {
                           <button onClick={() => confirmReservation(getId(r))}
                             className="p-1.5 rounded-lg hover:bg-green-100 text-green-600 transition-colors" title="Confirm">
                             <Check size={15}/>
+                          </button>
+                        )}
+                        {r.status === 'Confirmed' && (
+                          <button onClick={() => checkoutReservation(getId(r))}
+                            className="p-1.5 rounded-lg hover:bg-amber-100 text-amber-600 transition-colors" title="Check Out">
+                            <LogOut size={15}/>
                           </button>
                         )}
                         {!['Cancelled', 'CheckedOut'].includes(r.status) && (

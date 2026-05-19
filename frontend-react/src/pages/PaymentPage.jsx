@@ -66,7 +66,7 @@ export default function PaymentPage() {
         roomId:        roomId,
         checkInDate:   state.checkIn,
         checkOutDate:  state.checkOut,
-        status:        'Confirmed',
+        status:        'Pending',
         totalAmount:   total,
       });
 
@@ -83,7 +83,7 @@ export default function PaymentPage() {
       }
 
       const ref = 'HRV-' + Math.random().toString(36).substr(2,8).toUpperCase();
-      addToast('Booking confirmed! See you soon.', 'success');
+      addToast('Booking request submitted! Awaiting hotel confirmation.', 'success');
       nav('/booking/confirmation', { state: { ...state, ref, total } });
     } catch (err) {
       addToast(err.message || 'Failed to complete booking. Please try again.', 'error');

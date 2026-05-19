@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, Globe, Shield, Trash2 } from 'lucide-react';
 import UserSidebar from '../../components/layout/UserSidebar';
-import { useToast } from '../../context/AppContext';
+import { useAuth, useToast } from '../../context/AppContext';
+import { customersApi } from '../../api/client';
 
 function Toggle({ checked, onChange }) {
   return (
@@ -15,7 +17,10 @@ function Toggle({ checked, onChange }) {
 }
 
 export default function SettingsPage() {
+  const { user, logoutUser } = useAuth();
   const { addToast } = useToast();
+  const nav = useNavigate();
+  const [isDeleting, setIsDeleting] = useState(false);
   const [notifs, setNotifs] = useState({
     email: true, sms: false, promo: true, checkin: true,
   });
@@ -25,6 +30,29 @@ export default function SettingsPage() {
 
   const saveNotifs = () => addToast('Notification preferences saved.', 'success');
   const savePrefs  = () => addToast('Preferences saved.', 'success');
+
+  const handleDeleteAccount = async () => {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete your account? This action is permanent, and all your data, bookings, and reviews will be removed."
+    );
+    if (!confirmDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const customerId = user?.id ?? user?.customerId;
+      if (!customerId) {
+        throw new Error("No customer ID found in session.");
+      }
+      await customersApi.delete(customerId);
+      addToast('Your account was successfully deleted.', 'success');
+      logoutUser();
+      nav('/');
+    } catch (err) {
+      addToast(err.message || 'Failed to delete account.', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-cream">
@@ -123,7 +151,12 @@ export default function SettingsPage() {
             <p className="text-sm text-red-600 mb-4">
               Deleting your account is permanent and cannot be undone. All your data will be removed.
             </p>
-            <button className="btn-danger py-2.5 px-5 text-sm">Delete Account</button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="btn-danger py-2.5 px-5 text-sm">
+              {isDeleting ? 'Deleting...' : 'Delete Account'}
+            </button>
           </div>
         </div>
       </main>

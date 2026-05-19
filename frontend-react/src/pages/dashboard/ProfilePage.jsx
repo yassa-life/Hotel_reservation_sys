@@ -10,6 +10,17 @@ export default function ProfilePage() {
   const [tab, setTab] = useState('info');
   const [saving, setSaving] = useState(false);
 
+  const parsePhone = (p) => {
+    const raw = (p || '').trim();
+    const codes = ['+94', '+1', '+44', '+91', '+61', '+65', '+34', '+39'];
+    for (const code of codes) {
+      if (raw.startsWith(code)) {
+        return { countryCode: code, phoneNum: raw.slice(code.length).trim() };
+      }
+    }
+    return { countryCode: '+94', phoneNum: raw };
+  };
+
   // Split stored name into first/last for the form
   const nameParts = (user?.name || '').split(' ');
   const [info, setInfo] = useState({
@@ -19,6 +30,10 @@ export default function ProfilePage() {
     phone:     user?.phone    || '',
     address:   user?.address  || '',
   });
+
+  const initialPhone = parsePhone(user?.phone);
+  const [countryCode, setCountryCode] = useState(initialPhone.countryCode);
+  const [phoneNum, setPhoneNum] = useState(initialPhone.phoneNum);
 
   const [pwd, setPwd] = useState({ current: '', next: '', confirm: '' });
 
@@ -33,6 +48,9 @@ export default function ProfilePage() {
       phone:     user.phone   || '',
       address:   user.address || '',
     });
+    const parsed = parsePhone(user.phone);
+    setCountryCode(parsed.countryCode);
+    setPhoneNum(parsed.phoneNum);
   }, [user]);
 
   const setI = k => e => setInfo(p => ({ ...p, [k]: e.target.value }));
@@ -40,20 +58,40 @@ export default function ProfilePage() {
 
   const saveInfo = async (e) => {
     e.preventDefault();
+
+    // Strict email check regex
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(info.email)) {
+      addToast('Valid email required.', 'error');
+      return;
+    }
+
+    // Strict phone number check regex (7 to 12 digits, ignoring spaces/dashes)
+    const cleanPhone = phoneNum.replace(/[\s\-]/g, '');
+    const phoneRegex = /^[0-9]{7,12}$/;
+    if (!cleanPhone) {
+      addToast('Phone number is required.', 'error');
+      return;
+    } else if (!phoneRegex.test(cleanPhone)) {
+      addToast('Valid phone number required (7 to 12 digits).', 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       const fullName = `${info.firstName} ${info.lastName}`.trim();
+      const combinedPhone = `${countryCode} ${phoneNum}`;
       const payload = {
         id:       user?.id ?? user?.customerId,
         name:     fullName,
         email:    info.email,
-        phone:    info.phone,
+        phone:    combinedPhone,
         address:  info.address,
         password: user?.password || '', // keep existing password
       };
       await customersApi.update(payload);
       // Update local session with new name/phone/address
-      loginUser({ ...user, name: fullName, email: info.email, phone: info.phone, address: info.address });
+      loginUser({ ...user, name: fullName, email: info.email, phone: combinedPhone, address: info.address });
       addToast('Profile updated successfully.', 'success');
     } catch (err) {
       addToast(err.message || 'Failed to update profile.', 'error');
@@ -153,7 +191,20 @@ export default function ProfilePage() {
                 </div>
                 <div className="col-span-2">
                   <label className="label">Phone</label>
-                  <input value={info.phone} onChange={setI('phone')} className="input-field" placeholder="+94 77 000 0000"/>
+                  <div className="flex gap-2">
+                    <select value={countryCode} onChange={e => setCountryCode(e.target.value)}
+                      className="input-field max-w-[100px] text-sm bg-white">
+                      <option value="+94">+94 (SL)</option>
+                      <option value="+1">+1 (US)</option>
+                      <option value="+44">+44 (UK)</option>
+                      <option value="+91">+91 (IN)</option>
+                      <option value="+61">+61 (AU)</option>
+                      <option value="+65">+65 (SG)</option>
+                      <option value="+34">+34 (ES)</option>
+                      <option value="+39">+39 (IT)</option>
+                    </select>
+                    <input value={phoneNum} onChange={e => setPhoneNum(e.target.value)} className="input-field flex-1" placeholder="77 123 4567"/>
+                  </div>
                 </div>
                 <div className="col-span-2">
                   <label className="label">Address <span className="text-mid-gray font-normal">(optional)</span></label>

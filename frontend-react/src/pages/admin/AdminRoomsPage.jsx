@@ -302,8 +302,30 @@ export default function AdminRoomsPage() {
   };
 
   const saveRoom = async () => {
+    if (!form.roomNumber || !form.roomNumber.toString().trim()) {
+      addToast('Room number is required.', 'error');
+      return;
+    }
+    if (!form.type) {
+      addToast('Room type is required.', 'error');
+      return;
+    }
+    if (form.pricePerNight === '' || form.pricePerNight === null || form.pricePerNight === undefined) {
+      addToast('Price per night is required.', 'error');
+      return;
+    }
+    const price = Number(form.pricePerNight);
+    if (isNaN(price)) {
+      addToast('Price per night must be a valid number.', 'error');
+      return;
+    }
+    if (price <= 0) {
+      addToast('Price per night must be greater than zero.', 'error');
+      return;
+    }
+
     setSaving(true);
-    const payload = { ...form, pricePerNight: Number(form.pricePerNight) };
+    const payload = { ...form, pricePerNight: price };
     try {
       if (editId) {
         await roomsApi.update({ ...payload, roomId: editId });

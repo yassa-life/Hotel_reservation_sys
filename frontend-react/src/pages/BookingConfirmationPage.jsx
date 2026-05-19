@@ -17,10 +17,10 @@ export default function BookingConfirmationPage() {
             <CheckCircle size={40} className="text-green-500"/>
           </div>
 
-          <h1 className="font-display text-3xl font-bold text-navy-800 mb-2">Booking Confirmed!</h1>
+          <h1 className="font-display text-3xl font-bold text-navy-800 mb-2">Booking Received!</h1>
           <p className="text-mid-gray mb-8">
-            Your reservation has been successfully placed. A confirmation email will be sent to{' '}
-            <span className="text-dark-text font-medium">{state?.guest?.email || 'your email'}</span>.
+            Your reservation request has been successfully placed. A confirmation email will be sent to{' '}
+            <span className="text-dark-text font-medium">{state?.guest?.email || 'your email'}</span> once confirmed.
           </p>
 
           {/* Ref Card */}
@@ -30,7 +30,7 @@ export default function BookingConfirmationPage() {
                 <p className="text-xs text-mid-gray uppercase tracking-wider mb-1">Booking Reference</p>
                 <p className="font-display font-bold text-2xl text-gold-600">{ref}</p>
               </div>
-              <span className="badge badge-confirmed text-sm py-1.5 px-3">Confirmed</span>
+              <span className="badge badge-pending text-sm py-1.5 px-3">Pending</span>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
