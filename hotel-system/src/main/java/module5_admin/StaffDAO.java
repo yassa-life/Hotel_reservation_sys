@@ -83,13 +83,21 @@ public class StaffDAO {
 
     // 3. UPDATE
     public boolean updateStaff(Staff staff) {
+        String password = staff.getPassword();
+        if (password == null || password.trim().isEmpty()) {
+            Staff existing = getStaffById(staff.getId());
+            if (existing != null) {
+                password = existing.getPassword();
+            }
+        }
+
         String sql = "UPDATE Staff SET name = ?, email = ?, password = ?, role = ?, phone = ? WHERE staff_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, staff.getName());
             pstmt.setString(2, staff.getEmail());
-            pstmt.setString(3, staff.getPassword());
+            pstmt.setString(3, password);
             pstmt.setString(4, staff.getRole());
             pstmt.setString(5, staff.getPhone());
             pstmt.setInt(6, staff.getId());

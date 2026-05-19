@@ -81,13 +81,21 @@ public class CustomerDAO {
 
     // 3. UPDATE Operation
     public boolean updateCustomer(Customer customer) {
+        String password = customer.getPassword();
+        if (password == null || password.trim().isEmpty()) {
+            Customer existing = getCustomerById(customer.getId());
+            if (existing != null) {
+                password = existing.getPassword();
+            }
+        }
+
         String sql = "UPDATE Customers SET name = ?, email = ?, password = ?, phone = ?, address = ? WHERE customer_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, customer.getName());
             pstmt.setString(2, customer.getEmail());
-            pstmt.setString(3, customer.getPassword());
+            pstmt.setString(3, password);
             pstmt.setString(4, customer.getPhone());
             pstmt.setString(5, customer.getAddress());
             pstmt.setInt(6, customer.getId());
