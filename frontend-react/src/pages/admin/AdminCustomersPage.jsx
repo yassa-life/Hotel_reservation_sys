@@ -34,7 +34,7 @@ export default function AdminCustomersPage() {
 
   useEffect(() => { load(); }, []);
 
-  const getId    = c => c.customerId  ?? c.customer_id;
+  const getId    = c => c.id ?? c.customerId  ?? c.customer_id;
   const getName  = c => c.name;
   const getEmail = c => c.email;
   const getPhone = c => c.phone ?? '—';

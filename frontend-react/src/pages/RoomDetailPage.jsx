@@ -162,7 +162,7 @@ export default function RoomDetailPage() {
   };
 
   const today = new Date().toISOString().split('T')[0];
-  const isAvailable = (room.status ?? '').toLowerCase() === 'available';
+  const isMaintenance = (room.status ?? '').toLowerCase() === 'maintenance';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -335,9 +335,9 @@ export default function RoomDetailPage() {
               )}
 
               <button onClick={handleBook}
-                disabled={!isAvailable || !!dateError || !checkIn || !checkOut}
+                disabled={isMaintenance || !!dateError || !checkIn || !checkOut}
                 className="btn-gold w-full mt-5 disabled:opacity-50 disabled:cursor-not-allowed">
-                {isAvailable ? 'Proceed to Book' : room.status}
+                {isMaintenance ? 'Under Maintenance' : 'Proceed to Book'}
               </button>
 
               <div className="flex items-center justify-center gap-2 mt-3">
