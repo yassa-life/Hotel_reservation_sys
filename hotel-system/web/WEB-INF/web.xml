@@ -21,6 +21,13 @@
     </filter-mapping>
 
     <!-- ============================================================
+         Background Tasks Listener
+         ============================================================ -->
+    <listener>
+        <listener-class>shared.AutoCheckOutListener</listener-class>
+    </listener>
+
+    <!-- ============================================================
          Servlet Declarations
          ============================================================ -->
 
@@ -32,6 +39,34 @@
     <servlet-mapping>
         <servlet-name>RoomServlet</servlet-name>
         <url-pattern>/api/rooms</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 1b: Room Image Upload (file) -->
+    <servlet>
+        <servlet-name>RoomImageServlet</servlet-name>
+        <servlet-class>servlets.RoomImageServlet</servlet-class>
+        <multipart-config>
+            <!-- 1 MB threshold before writing to temp disk -->
+            <file-size-threshold>1048576</file-size-threshold>
+            <!-- 10 MB max per file -->
+            <max-file-size>10485760</max-file-size>
+            <!-- 50 MB max total request -->
+            <max-request-size>52428800</max-request-size>
+        </multipart-config>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RoomImageServlet</servlet-name>
+        <url-pattern>/api/rooms/image</url-pattern>
+    </servlet-mapping>
+
+    <!-- Module 1c: Room Image by URL (JSON) -->
+    <servlet>
+        <servlet-name>RoomImageUrlServlet</servlet-name>
+        <servlet-class>servlets.RoomImageUrlServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>RoomImageUrlServlet</servlet-name>
+        <url-pattern>/api/rooms/imageurl</url-pattern>
     </servlet-mapping>
 
     <!-- Module 2: Customer Management -->

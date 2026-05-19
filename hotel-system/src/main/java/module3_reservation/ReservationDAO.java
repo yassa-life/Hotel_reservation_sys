@@ -80,7 +80,22 @@ public class ReservationDAO {
             pstmt.setDouble(5, reservation.getTotalAmount());
             pstmt.setInt(6, reservation.getReservationId());
 
-            return pstmt.executeUpdate() > 0;
+            boolean success = pstmt.executeUpdate() > 0;
+            if (success) {
+                String roomStatusSql = null;
+                if ("Confirmed".equals(reservation.getStatus())) {
+                    roomStatusSql = "UPDATE Rooms SET status = 'Booked' WHERE room_id = ?";
+                } else if ("CheckedOut".equals(reservation.getStatus()) || "Cancelled".equals(reservation.getStatus())) {
+                    roomStatusSql = "UPDATE Rooms SET status = 'Available' WHERE room_id = ?";
+                }
+                if (roomStatusSql != null) {
+                    try (PreparedStatement pstmtRoom = conn.prepareStatement(roomStatusSql)) {
+                        pstmtRoom.setInt(1, reservation.getRoomId());
+                        pstmtRoom.executeUpdate();
+                    }
+                }
+            }
+            return success;
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -95,7 +110,28 @@ public class ReservationDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, reservationId);
-            return pstmt.executeUpdate() > 0;
+            boolean success = pstmt.executeUpdate() > 0;
+            if (success) {
+                // Find room_id for this reservation to set it as Available
+                String findRoomSql = "SELECT room_id FROM Reservations WHERE reservation_id = ?";
+                int roomId = -1;
+                try (PreparedStatement pstmtFind = conn.prepareStatement(findRoomSql)) {
+                    pstmtFind.setInt(1, reservationId);
+                    try (ResultSet rs = pstmtFind.executeQuery()) {
+                        if (rs.next()) {
+                            roomId = rs.getInt("room_id");
+                        }
+                    }
+                }
+                if (roomId != -1) {
+                    String roomStatusSql = "UPDATE Rooms SET status = 'Available' WHERE room_id = ?";
+                    try (PreparedStatement pstmtRoom = conn.prepareStatement(roomStatusSql)) {
+                        pstmtRoom.setInt(1, roomId);
+                        pstmtRoom.executeUpdate();
+                    }
+                }
+            }
+            return success;
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -142,5 +178,34 @@ public class ReservationDAO {
             e.printStackTrace();
         }
         return reservations;
+    }
+
+    // 7. Auto check-out past reservations
+    public void autoCheckOutPastReservations() {
+        String sql = "SELECT reservation_id, room_id FROM Reservations WHERE status IN ('Pending', 'Confirmed') AND check_out_date <= CURRENT_DATE()";
+        String updateResSql = "UPDATE Reservations SET status = 'CheckedOut' WHERE reservation_id = ?";
+        String updateRoomSql = "UPDATE Rooms SET status = 'Available' WHERE room_id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmtSelect = conn.prepareStatement(sql);
+             ResultSet rs = pstmtSelect.executeQuery()) {
+
+            while (rs.next()) {
+                int reservationId = rs.getInt("reservation_id");
+                int roomId = rs.getInt("room_id");
+
+                try (PreparedStatement pstmtRes = conn.prepareStatement(updateResSql)) {
+                    pstmtRes.setInt(1, reservationId);
+                    pstmtRes.executeUpdate();
+                }
+                try (PreparedStatement pstmtRoom = conn.prepareStatement(updateRoomSql)) {
+                    pstmtRoom.setInt(1, roomId);
+                    pstmtRoom.executeUpdate();
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
