@@ -116,6 +116,7 @@ export const reservationsApi = {
 // ─── Payments ─────────────────────────────────────────────────────────────────
 export const paymentsApi = {
   getAll:  ()     => request('/payments'),
+  getByReservation: (resId) => request(`/payments?reservationId=${resId}`),
   create:  (data) => request('/payments', { method: 'POST', body: JSON.stringify(data) }),
   update:  (data) => request('/payments', { method: 'PUT',  body: JSON.stringify(data) }),
 };

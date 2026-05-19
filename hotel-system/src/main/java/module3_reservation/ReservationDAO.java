@@ -27,10 +27,10 @@ public class ReservationDAO {
     }
 
     // 1. CREATE Operation
-    public boolean makeReservation(Reservation reservation) {
+    public int makeReservation(Reservation reservation) {
         String sql = "INSERT INTO Reservations (customer_id, room_id, check_in_date, check_out_date, status, total_amount) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setInt(1, reservation.getCustomerId());
             pstmt.setInt(2, reservation.getRoomId());
@@ -39,11 +39,19 @@ public class ReservationDAO {
             pstmt.setString(5, reservation.getStatus());
             pstmt.setDouble(6, reservation.getTotalAmount());
 
-            return pstmt.executeUpdate() > 0;
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        return generatedKeys.getInt(1);
+                    }
+                }
+            }
+            return -1;
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
+            return -1;
         }
     }
 
@@ -92,6 +100,15 @@ public class ReservationDAO {
                     try (PreparedStatement pstmtRoom = conn.prepareStatement(roomStatusSql)) {
                         pstmtRoom.setInt(1, reservation.getRoomId());
                         pstmtRoom.executeUpdate();
+                    }
+                }
+
+                // Auto-mark Cash Pending payments as Paid when checked out
+                if ("CheckedOut".equals(reservation.getStatus())) {
+                    String payStatusSql = "UPDATE Payments SET status = 'Paid' WHERE reservation_id = ? AND payment_method = 'Cash' AND status = 'Pending'";
+                    try (PreparedStatement pstmtPay = conn.prepareStatement(payStatusSql)) {
+                        pstmtPay.setInt(1, reservation.getReservationId());
+                        pstmtPay.executeUpdate();
                     }
                 }
             }
@@ -201,6 +218,13 @@ public class ReservationDAO {
                 try (PreparedStatement pstmtRoom = conn.prepareStatement(updateRoomSql)) {
                     pstmtRoom.setInt(1, roomId);
                     pstmtRoom.executeUpdate();
+                }
+
+                // Auto-mark Cash Pending payments as Paid when checked out automatically
+                String payStatusSql = "UPDATE Payments SET status = 'Paid' WHERE reservation_id = ? AND payment_method = 'Cash' AND status = 'Pending'";
+                try (PreparedStatement pstmtPay = conn.prepareStatement(payStatusSql)) {
+                    pstmtPay.setInt(1, reservationId);
+                    pstmtPay.executeUpdate();
                 }
             }
 

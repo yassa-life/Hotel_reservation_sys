@@ -57,8 +57,13 @@ public class ReservationServlet extends HttpServlet {
         setCorsHeaders(resp);
         resp.setContentType("application/json");
         Reservation reservation = gson.fromJson(req.getReader(), Reservation.class);
-        boolean success = reservationDAO.makeReservation(reservation);
-        resp.getWriter().print("{\"success\":" + success + "}");
+        int generatedId = reservationDAO.makeReservation(reservation);
+        if (generatedId > 0) {
+            resp.getWriter().print("{\"success\":true,\"reservationId\":" + generatedId + "}");
+        } else {
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            resp.getWriter().print("{\"success\":false}");
+        }
     }
 
     @Override

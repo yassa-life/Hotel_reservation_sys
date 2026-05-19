@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Download, Eye, Check, X, LogOut } from 'lucide-react';
 import AdminSidebar from '../../components/layout/AdminSidebar';
 import { StatusBadge, Modal, ConfirmModal, Pagination } from '../../components/shared/UI';
-import { reservationsApi } from '../../api/client';
+import { reservationsApi, paymentsApi } from '../../api/client';
 import { useToast } from '../../context/AppContext';
 
 const ALL_STATUSES = ['All', 'Confirmed', 'Pending', 'CheckedOut', 'Cancelled'];
@@ -22,6 +22,43 @@ export default function AdminBookingsPage() {
   const [page,    setPage]              = useState(1);
   const [selected, setSelected]         = useState(null);
   const [cancelModal, setCancelModal]   = useState({ open: false, id: null });
+  const [payment, setPayment]           = useState(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
+
+  useEffect(() => {
+    if (!selected) {
+      setPayment(null);
+      return;
+    }
+    const loadPayment = async () => {
+      setLoadingPayment(true);
+      try {
+        const id = selected.reservationId ?? selected.reservation_id;
+        const payData = await paymentsApi.getByReservation(id);
+        setPayment(payData && payData.paymentId ? payData : null);
+      } catch (err) {
+        console.error('Failed to load payment details', err);
+        setPayment(null);
+      } finally {
+        setLoadingPayment(false);
+      }
+    };
+    loadPayment();
+  }, [selected]);
+
+  const handleMarkAsPaid = async () => {
+    if (!payment) return;
+    try {
+      await paymentsApi.update({
+        paymentId: payment.paymentId,
+        status: 'Paid'
+      });
+      setPayment(prev => prev ? { ...prev, status: 'Paid' } : null);
+      addToast('Payment marked as Paid.', 'success');
+    } catch (err) {
+      addToast(err.message || 'Failed to update payment status.', 'error');
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -207,21 +244,52 @@ export default function AdminBookingsPage() {
         {/* Detail Modal */}
         <Modal isOpen={!!selected} onClose={() => setSelected(null)} title="Reservation Details" maxWidth="max-w-lg">
           {selected && (
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                ['Reservation ID', `#${getId(selected)}`],
-                ['Status',         <StatusBadge status={mapStatus(selected.status)}/>],
-                ['Customer',       getCust(selected)],
-                ['Room',           getRoom(selected)],
-                ['Check-in',       getIn(selected)],
-                ['Check-out',      getOut(selected)],
-                ['Total Amount',   `LKR ${getAmt(selected).toLocaleString()}`],
-              ].map(([k, v]) => (
-                <div key={k}>
-                  <p className="text-xs text-mid-gray">{k}</p>
-                  <p className="font-medium text-dark-text">{v}</p>
-                </div>
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {[
+                  ['Reservation ID', `#${getId(selected)}`],
+                  ['Status',         <StatusBadge status={mapStatus(selected.status)}/>],
+                  ['Customer',       getCust(selected)],
+                  ['Room',           getRoom(selected)],
+                  ['Check-in',       getIn(selected)],
+                  ['Check-out',      getOut(selected)],
+                  ['Total Amount',   `LKR ${getAmt(selected).toLocaleString()}`],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <p className="text-xs text-mid-gray">{k}</p>
+                    <p className="font-medium text-dark-text">{v}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Payment Section */}
+              <div className="border-t border-light-gray pt-4">
+                <h3 className="font-display font-semibold text-navy-800 text-sm mb-3">Payment Information</h3>
+                {loadingPayment ? (
+                  <div className="flex items-center gap-2 text-xs text-mid-gray">
+                    <div className="w-3 h-3 border border-mid-gray border-t-transparent rounded-full animate-spin"/>
+                    Loading payment info...
+                  </div>
+                ) : payment ? (
+                  <div className="bg-cream rounded-xl p-4 border border-light-gray flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-mid-gray">Method: <span className="font-medium text-dark-text">{payment.paymentMethod}</span></p>
+                      <p className="text-xs text-mid-gray mt-1">
+                        Status: <span className={`font-semibold ${payment.status === 'Paid' ? 'text-green-600' : 'text-amber-600'}`}>{payment.status}</span>
+                      </p>
+                    </div>
+                    {payment.status === 'Pending' && payment.paymentMethod === 'Cash' && (
+                      <button
+                        onClick={handleMarkAsPaid}
+                        className="btn-gold py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+                        Mark as Paid
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-mid-gray italic">No payment record found for this reservation.</p>
+                )}
+              </div>
             </div>
           )}
         </Modal>
