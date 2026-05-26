@@ -4,8 +4,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import AdminSidebar from '../../components/layout/AdminSidebar';
-import { reportsApi } from '../../api/client';
-import { REVENUE_DATA as MOCK_REVENUE_DATA, ROOM_REVENUE as MOCK_ROOM_REVENUE } from '../../data/mockData';
+import { reportsApi, reservationsApi, customersApi, roomsApi } from '../../api/client';
+
 
 const COLORS = ['#1e3a5f','#d4af37','#4caf50','#9e9e9e'];
 
@@ -35,19 +35,36 @@ function ChartCard({ title, subtitle, children }) {
 }
 
 export default function AdminAnalyticsPage() {
-  const [summary, setSummary] = useState({});
+  const [summary,     setSummary]     = useState({});
   const [revenueData, setRevenueData] = useState([]);
-  
+  const [roomRevData, setRoomRevData] = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [year,        setYear]        = useState(new Date().getFullYear());
+
   useEffect(() => {
-    reportsApi.getSummary().then(data => setSummary(data || {})).catch(() => {});
-    reportsApi.getRevenue().then(data => {
-      if (Array.isArray(data) && data.length > 0) {
-        setRevenueData(data);
-      } else {
-        setRevenueData(MOCK_REVENUE_DATA);
-      }
-    }).catch(() => setRevenueData(MOCK_REVENUE_DATA));
-  }, []);
+    setLoading(true);
+    Promise.all([
+      reportsApi.getSummary().catch(() => ({})),
+      reportsApi.getRevenue(year).catch(() => []),
+      roomsApi.getAll().catch(() => []),
+      customersApi.getAll().catch(() => []),
+    ]).then(([sum, rev, rooms, custs]) => {
+      setSummary({ ...sum, totalCustomers: custs.length, availableRooms: rooms.filter(r => (r.status||'').toLowerCase() === 'available').length });
+      setRevenueData(Array.isArray(rev) && rev.length > 0 ? rev : []);
+      // Build room revenue breakdown from room types
+      const typeMap = {};
+      rooms.forEach(r => { typeMap[r.type] = (typeMap[r.type] || 0) + 1; });
+      const total = rooms.length || 1;
+      setRoomRevData(Object.entries(typeMap).map(([name, count]) => ({ name, value: Math.round(count/total*100) })));
+    }).finally(() => setLoading(false));
+  }, [year]);
+
+  const roomRevDisplay = roomRevData.length > 0 ? roomRevData : [
+
+    { name: 'Single', value: 25 }, { name: 'Double', value: 40 },
+    { name: 'Suite',  value: 20 }, { name: 'Deluxe', value: 15 },
+  ];
+
 
   return (
     <div className="flex min-h-screen bg-cream">
@@ -61,36 +78,50 @@ export default function AdminAnalyticsPage() {
         {/* KPI Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
-            { label:'Total Revenue',    val:`$${((summary.totalRevenue || 778000)/1000).toFixed(1)}k`,  change:'+14%',  up:true },
-            { label:'Total Bookings',   val:summary.totalReservations || '2,234',  change:'+9%',   up:true },
-            { label:'Total Customers',  val:summary.totalCustomers || '1,423',  change:'+5.2%', up:true },
-            { label:'Available Rooms',  val:summary.availableRooms || '45',   change:'-2.1%', up:false },
+            { label:'Total Revenue',   val: summary.totalRevenue    ? `Rs.${Number(summary.totalRevenue).toLocaleString()}` : '—' },
+            { label:'Total Bookings',  val: summary.totalReservations ?? '—' },
+            { label:'Total Customers', val: summary.totalCustomers  ?? '—' },
+            { label:'Available Rooms', val: summary.availableRooms  ?? '—' },
           ].map(k => (
             <div key={k.label} className="card">
               <p className="text-xs text-mid-gray mb-1">{k.label}</p>
-              <p className="font-display font-bold text-2xl text-dark-text">{k.val}</p>
-              <span className={`text-xs font-semibold ${k.up ? 'text-green-600' : 'text-red-500'}`}>
-                {k.change} vs last year
-              </span>
+              <p className="font-display font-bold text-2xl text-dark-text">
+                {loading ? <span className="text-mid-gray">…</span> : k.val}
+              </p>
             </div>
           ))}
         </div>
 
+
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <ChartCard title="Booking Trends" subtitle="Monthly bookings over the past year">
+          <div className="card">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="font-display font-semibold text-navy-800">Revenue Trends</h2>
+                <p className="text-xs text-mid-gray mt-0.5">Monthly revenue</p>
+              </div>
+              <select value={year} onChange={e => setYear(+e.target.value)}
+                className="text-xs border border-light-gray rounded px-2 py-1 outline-none text-navy-700 bg-cream">
+                {Array.from({length: 5}, (_, i) => new Date().getFullYear() - i).map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={revenueData} margin={{top:5,right:10,left:0,bottom:5}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef"/>
                 <XAxis dataKey="month" tick={{fontSize:11,fill:'#6c757d'}}/>
-                <YAxis tick={{fontSize:11,fill:'#6c757d'}}/>
-                <Tooltip contentStyle={{fontSize:12,border:'1px solid #e9ecef',borderRadius:8}}/>
-                <Bar dataKey="bookings" fill="#1e3a5f" radius={[4,4,0,0]}/>
+                <YAxis tick={{fontSize:11,fill:'#6c757d'}} tickFormatter={v=>`Rs.${v/1000}k`}/>
+                <Tooltip formatter={v=>[`Rs.${v.toLocaleString()}`, 'Revenue']}
+                         contentStyle={{fontSize:12,border:'1px solid #e9ecef',borderRadius:8}}/>
+                <Bar dataKey="revenue" fill="#1e3a5f" radius={[4,4,0,0]}/>
               </BarChart>
             </ResponsiveContainer>
-          </ChartCard>
+          </div>
 
           <ChartCard title="Occupancy Rate" subtitle="Monthly occupancy percentage">
+
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={OCCUPANCY_DATA} margin={{top:5,right:10,left:0,bottom:5}}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e9ecef"/>
@@ -107,20 +138,20 @@ export default function AdminAnalyticsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Revenue by Room Type */}
-          <ChartCard title="Revenue by Room Type" subtitle="Percentage share">
+          <ChartCard title="Revenue by Room Type" subtitle="Room type distribution">
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={MOCK_ROOM_REVENUE} cx="50%" cy="50%" outerRadius={80}
+                <Pie data={roomRevDisplay} cx="50%" cy="50%" outerRadius={80}
                      dataKey="value" nameKey="name" label={({name,value})=>`${name} ${value}%`}
                      labelLine={false}>
-                  {MOCK_ROOM_REVENUE.map((_,i) => <Cell key={i} fill={COLORS[i]}/>)}
+                  {roomRevDisplay.map((_,i) => <Cell key={i} fill={COLORS[i]}/>)}
                 </Pie>
                 <Tooltip formatter={v=>[`${v}%`,'Share']}
                          contentStyle={{fontSize:12,border:'1px solid #e9ecef',borderRadius:8}}/>
               </PieChart>
             </ResponsiveContainer>
             <div className="grid grid-cols-2 gap-2 mt-2">
-              {MOCK_ROOM_REVENUE.map((r,i) => (
+              {roomRevDisplay.map((r,i) => (
                 <div key={r.name} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{background:COLORS[i]}}/>
                   <span className="text-xs text-mid-gray">{r.name}: <strong>{r.value}%</strong></span>
@@ -128,6 +159,7 @@ export default function AdminAnalyticsPage() {
               ))}
             </div>
           </ChartCard>
+
 
           {/* Popular Booking Periods */}
           <div className="lg:col-span-2">
