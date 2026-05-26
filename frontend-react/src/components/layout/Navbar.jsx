@@ -12,7 +12,7 @@ export default function Navbar() {
   const links = [
     { to: '/', label: 'Home' },
     { to: '/rooms', label: 'Rooms' },
-    { to: '/amenities', label: 'Amenities' },
+   
   ];
 
   return (

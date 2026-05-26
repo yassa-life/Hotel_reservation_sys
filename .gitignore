@@ -1,0 +1,26 @@
+# Java
+/target/
+*.class
+*.war
+*.jar
+*.iml
+
+# Node
+frontend-react/node_modules/
+frontend-react/.next/
+frontend-react/.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Misc
+hotel-system/database/*.log

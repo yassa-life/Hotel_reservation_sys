@@ -95,12 +95,12 @@ export default function AdminLoginPage() {
               </div>
               {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password}</p>}
             </div>
-
+{/* 
             <div className="bg-white/5 rounded-xl p-3 border border-white/10 text-xs text-navy-400">
               <p className="font-medium text-navy-300 mb-1">Default credentials:</p>
               <p>Email: <span className="text-navy-200">admin@hotel.com</span></p>
               <p>Password: <span className="text-navy-200">admin123</span></p>
-            </div>
+            </div> */}
 
             <button type="submit" disabled={loading}
               className="w-full bg-gold-500 text-navy-900 py-3.5 rounded-xl font-semibold text-sm
